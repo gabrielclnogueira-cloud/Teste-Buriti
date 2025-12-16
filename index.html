@@ -25,10 +25,10 @@
   </div>
   <div id="msg" class="msg">Carregando modelo…</div>
 
-  <!-- Scripts CDN (ordem importa) -->
-  <script src="https://cdn.jsdelivre@0.150.1/build/three.min.js</script>
-  <script src="https://cdn.jsdelivr.net/npm/threeples/js/loaders/GLTFLoader.js</script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0es/js/controls/OrbitControls.js</script>
+  <!-- Scripts via CDN (ordem correta) -->
+  https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js</script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.s/js/loaders/GLTFLoader.js</script>
+  https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js</script>
 
   <script>
     const container = document.getElementById('app');
@@ -62,7 +62,7 @@
 
     const loader = new THREE.GLTFLoader();
 
-    // O arquivo precisa estar no MESMO diretório que o index.html
+    // Ajuste o nome do arquivo se for diferente:
     const MODEL_URL = 'modelo.glb';
 
     loader.load(
@@ -133,7 +133,7 @@
       else document.exitFullscreen?.();
     });
     window.addEventListener('keydown', (ev) => {
-      if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
+      if (ev.key.to      if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
     });
-   </script>
+  </script>
 </body>
