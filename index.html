@@ -1,45 +1,167 @@
 
-<!-- CDN base -->
-https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js</script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examplesOrbitControls.js</script>
-<script src="sdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js</script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loader.js</script>
-<script>
-  const container = document.getElementById('app');
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 50000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  container.appendChild(renderer.domElement);
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>Viewer 3D – Buriti</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #app { position: fixed; inset: 0; background: #111; }
+    .ui {
+      position: fixed; top: 10px; left: 10px; z-index: 10;
+      display: flex; gap: 8px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .btn {
+      border: 1px solid #444; background: #1e1e1e; color: #ddd;
+      padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    .btn:hover { background: #2a2a2a; }
+    .msg {
+      position: fixed; bottom: 10px; left: 10px; z-index: 10; color: #ccc;
+      font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: rgba(0,0,0,.35); padding: 6px 8px; border-radius: 6px; max-width: 60ch;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="ui">
+    <button id="btnFit" class="btn" title="Enquadrar modelo (F)">Enquadrar</button>
+    <button id="btnFull" class="btn" title="Tela cheia">Tela cheia</button>
+    <label class="btn" style="display:flex;align-items:center;gap:6px;user-select:none;">
+      <input id="chkGrid" type="checkbox" checked /> Grade
+    </label>
+  </div>
+  <div id="msg" class="msg">Carregando modelo…</div>
 
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  camera.position.set(5,3,8);
+  <!-- Bibliotecas via CDN (ordem importa) -->
+  <script src.jsdelivr.net/npm/three@0.150.1/build/three.min.js</script>
+  https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js</script>
+  <script src="https://cdn.jsdelivr.net/npm/threeples/js/loaders/GLTFLoader.js</script>
+  <!-- Ative DRACO se o seu GLB estiver comprimido com Draco (recomendado p/ arquivos grandes) -->
+  https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/DRACOLoader.js</script>
 
-  // DRACO: configurar o path para os decoders
-  const dracoLoader = new THREE.DRACOLoader();
-  dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/libs/draco/');
-  // Opcional em builds modernas:
-  // dracoLoader.setDecoderConfig({ type: 'js' });
+  <script>
+    const container = document.getElementById('app');
+    const msg = document.getElementById('msg');
 
-  const gltfLoader = new THREE.GLTFLoader();
-  gltfLoader.setDRACOLoader(dracoLoader);
+    // Cena, câmera e render
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
 
-  const MODEL_URL = 'modelo.glb'; // ajuste se estiver em subpasta
-  gltfLoader.load(MODEL_URL, (gltf) => {
-    scene.add(gltf.scene);
-    animate();
-  }, undefined, (err) => {
-    console.error('Erro ao carregar GLB:', err);
-  });
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 50000);
+    camera.position.set(5, 3, 8);
 
-  function animate(){
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-  }
-
-  window.addEventListener('resize', () => {
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
-   });
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    // Luz
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x303040, 0.9);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(10, 20, 10);
+    scene.add(dir);
+
+    // Controles
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Grade opcional
+    const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
+    grid.material.opacity = 0.6;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    // Loader GLTF/GLB + DRACO (para arquivos comprimidos)
+    const dracoLoader = new THREE.DRACOLoader();
+    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/libs/draco/');
+    const gltfLoader = new THREE.GLTFLoader();
+    gltfLoader.setDRACOLoader(dracoLoader);
+
+    // >>> Se o seu arquivo não se chama exatamente 'modelo.glb',
+    // troque o nome/caminho aqui (respeite maiúsculas/minúsculas):
+    const MODEL_URL = 'modelo.glb';
+
+    gltfLoader.load(
+      MODEL_URL,
+      (gltf) => {
+        const root = gltf.scene || gltf.scenes[0];
+        scene.add(root);
+        fitCameraToObject(root);
+        msg.textContent = 'Modelo carregado. Use o mouse para orbitar/zoom. [F] Enquadrar.';
+        animate();
+      },
+      (xhr) => {
+        const total = xhr.total || 1;
+        const pct = Math.min(100, Math.round((xhr.loaded / total) * 100));
+        msg.textContent = `Carregando modelo… ${pct}%`;
+      },
+      (error) => {
+        console.error('Falha ao carregar o modelo:', error);
+        msg.textContent = 'Erro ao carregar o modelo. Verifique o nome/rota do arquivo (Console F12).';
+      }
+    );
+
+    function fitCameraToObject(object3D, offset = 1.25) {
+      const box = new THREE.Box3().setFromObject(object3D);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxSize = Math.max(size.x, size.y, size.z);
+
+      grid.scale.setScalar(Math.max(1, maxSize / 10));
+      grid.position.y = box.min.y;
+
+      const halfFovY = (camera.fov * Math.PI) / 360;
+      const distance = (Math.max(size.x, size.y, size.z) * offset) / Math.tan(halfFovY);
+
+      const dir = new THREE.Vector3(1, 0.6, 1).normalize();
+      camera.position.copy(center.clone().addScaledVector(dir, distance));
+      camera.near = Math.max(0.01, distance / 100);
+      camera.far = distance * 100;
+      camera.updateProjectionMatrix();
+
+      controls.target.copy(center);
+      controls.update();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function onResize() {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    window.addEventListener('resize', onResize);
+    onResize();
+
+    // UI
+    document.getElementById('btnFit').addEventListener('click', () => {
+      const group = new THREE.Group();
+      scene.traverse(o => { if (o.isMesh) group.add(o); });
+      fitCameraToObject(group);
+    });
+    document.getElementById('chkGrid').addEventListener('change', (e) => {
+      grid.visible = e.target.checked;
+    });
+    document.getElementById('btnFull').addEventListener('click', () => {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) elem.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    });
+
+    // Atalho de teclado (F = Fit)
+    window.addEventListener('keydown', (ev)    window.addEventListener('keydown', (ev) => {
+      if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
+    });
+  </script>
+</body>
