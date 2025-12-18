@@ -35,18 +35,18 @@
   </div>
   <div id="msg" class="msg">Carregando modelo…</div>
 
-  <!-- Bibliotecas via CDN (ordem importa) -->
-  <script src.jsdelivr.net/npm/three@0.150.1/build/three.min.js</script>
-  https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js</script>
-  <script src="https://cdn.jsdelivr.net/npm/threeples/js/loaders/GLTFLoader.js</script>
-  <!-- Ative DRACO se o seu GLB estiver comprimido com Draco (recomendado p/ arquivos grandes) -->
+  <!-- Bibliotecas via CDN (ordem correta) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150e.min.js</script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/tControls.js</script>
+  https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js</script>
   https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/DRACOLoader.js</script>
 
   <script>
+    // Elementos base
     const container = document.getElementById('app');
     const msg = document.getElementById('msg');
 
-    // Cena, câmera e render
+    // Cena, câmera, renderizador
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
 
@@ -56,10 +56,15 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Para versões modernas do Three:
+    if ('outputColorSpace' in renderer) {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    } else {
+      renderer.outputEncoding = THREE.sRGBEncoding; // fallback
+    }
     container.appendChild(renderer.domElement);
 
-    // Luz
+    // Luzes
     const hemi = new THREE.HemisphereLight(0xffffff, 0x303040, 0.9);
     scene.add(hemi);
     const dir = new THREE.DirectionalLight(0xffffff, 0.6);
@@ -76,21 +81,36 @@
     grid.material.transparent = true;
     scene.add(grid);
 
-    // Loader GLTF/GLB + DRACO (para arquivos comprimidos)
+    // DRACO: apontar para o decodificador hospedado no CDN dos exemplos do Three
     const dracoLoader = new THREE.DRACOLoader();
     dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/libs/draco/');
+
+    // Loader GLTF/GLB com DRACO
     const gltfLoader = new THREE.GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
 
-    // >>> Se o seu arquivo não se chama exatamente 'modelo.glb',
-    // troque o nome/caminho aqui (respeite maiúsculas/minúsculas):
+    // >>> Ajuste aqui o caminho do seu GLB, se necessário:
+    // Se o arquivo estiver na mesma pasta do index.html e se chama "modelo.glb":
     const MODEL_URL = 'modelo.glb';
+    // Exemplos de alternativas:
+    // const MODEL_URL = 'assets/modelo.glb';
+    // const MODEL_URL = 'buriti.glb';
 
+    // Carregar o modelo
     gltfLoader.load(
       MODEL_URL,
       (gltf) => {
         const root = gltf.scene || gltf.scenes[0];
         scene.add(root);
+
+        // Ajustes finos em materiais (opcional)
+        root.traverse((obj) => {
+          if (obj.isMesh && obj.material) {
+            if (obj.material.map) obj.material.map.anisotropy = 8;
+            obj.material.needsUpdate = true;
+          }
+        });
+
         fitCameraToObject(root);
         msg.textContent = 'Modelo carregado. Use o mouse para orbitar/zoom. [F] Enquadrar.';
         animate();
@@ -102,38 +122,41 @@
       },
       (error) => {
         console.error('Falha ao carregar o modelo:', error);
-        msg.textContent = 'Erro ao carregar o modelo. Verifique o nome/rota do arquivo (Console F12).';
+        msg.textContent = 'Erro ao carregar o modelo. Verifique nome/rota e abra o Console (F12).';
       }
     );
 
+    // Enquadrar câmera ao modelo
     function fitCameraToObject(object3D, offset = 1.25) {
       const box = new THREE.Box3().setFromObject(object3D);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      const maxSize = Math.max(size.x, size.y, size.z);
 
+      const maxSize = Math.max(size.x, size.y, size.z);
       grid.scale.setScalar(Math.max(1, maxSize / 10));
       grid.position.y = box.min.y;
 
       const halfFovY = (camera.fov * Math.PI) / 360;
       const distance = (Math.max(size.x, size.y, size.z) * offset) / Math.tan(halfFovY);
-
       const dir = new THREE.Vector3(1, 0.6, 1).normalize();
+
       camera.position.copy(center.clone().addScaledVector(dir, distance));
       camera.near = Math.max(0.01, distance / 100);
-      camera.far = distance * 100;
+      camera.far  = distance * 100;
       camera.updateProjectionMatrix();
 
       controls.target.copy(center);
       controls.update();
     }
 
+    // Loop de renderização
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     }
 
+    // Resize responsivo
     function onResize() {
       const w = container.clientWidth;
       const h = container.clientHeight;
@@ -144,10 +167,10 @@
     window.addEventListener('resize', onResize);
     onResize();
 
-    // UI
+    // UI e atalhos
     document.getElementById('btnFit').addEventListener('click', () => {
       const group = new THREE.Group();
-      scene.traverse(o => { if (o.isMesh) group.add(o); });
+      scene.traverse((o) => { if (o.isMesh) group.add(o); });
       fitCameraToObject(group);
     });
     document.getElementById('chkGrid').addEventListener('change', (e) => {
@@ -158,10 +181,8 @@
       if (!document.fullscreenElement) elem.requestFullscreen?.();
       else document.exitFullscreen?.();
     });
-
-    // Atalho de teclado (F = Fit)
-    window.addEventListener('keydown', (ev)    window.addEventListener('keydown', (ev) => {
-      if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
+    window.addEventListener('keydown', (ev) => {
+      if (ev.key.toLowerCase() === 'f') document.getElementById      if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
     });
   </script>
 </body>
