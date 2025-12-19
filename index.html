@@ -71,7 +71,7 @@
     scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
     const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(10, 20, 10); scene.add(dir);
 
-    // Controles (AGORA com módulos: new OrbitControls(...) direto)
+    // Controles
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
@@ -79,9 +79,8 @@
     const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
     grid.material.opacity = 0.6; grid.material.transparent = true; scene.add(grid);
 
-    // Draco
+    // Draco (jsm)
     const dracoLoader = new DRACOLoader();
-    // Em jsm, o path correto é "examples/jsm/libs/draco/"
     dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/libs/draco/');
 
     const gltfLoader = new GLTFLoader();
@@ -90,7 +89,7 @@
     // Ajuste aqui se seu GLB estiver em subpasta
     const MODEL_URL = 'modelo.glb'; // ex.: 'assets/modelo.glb'
 
-    // Checar existência antes de carregar (ajuda a revelar 404/nome divergente)
+    // Checar existência (HEAD ajuda a identificar 404/caminho errado)
     fetch(MODEL_URL, { method: 'HEAD' })
       .then(res => { if (!res.ok) throw new Error(`Status ${res.status} em ${MODEL_URL}`); carregar(); })
       .catch(e => showError(`Não foi possível localizar "${MODEL_URL}". ${e.message}. Verifique nome/caminho no repositório (case-sensitive).`));
@@ -102,15 +101,6 @@
           const root = gltf.scene || gltf.scenes?.[0];
           if (!root) return showError('GLB carregado, mas cena vazia.');
           scene.add(root);
-
-          // Ajuste fino de materiais (opcional)
-          root.traverse((o) => {
-            if (o.isMesh && o.material) {
-              if (o.material.map) o.material.map.anisotropy = 8;
-              o.material.needsUpdate = true;
-            }
-          });
-
           fitCamera(root);
           msg.textContent = 'Modelo carregado. Use o mouse para orbitar/zoom. [F] Enquadrar.';
           animate();
@@ -155,8 +145,8 @@
     });
     document.getElementById('chkGrid').addEventListener('change', (e) => { grid.visible = e.target.checked; });
     document.getElementById('btnFull').addEventListener('click', () => {
-      const      const elem = document.documentElement; if (!document.fullscreenElement) elem.requestFullscreen?.(); else document.exitFullscreen?.();
+      const elem = document.documentElement; if (!document.fullscreenElement) elem.requestFullscreen?.(); else document.exitFullscreen?.();
     });
-    window.addEventListener('keydown', (ev) => { if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click(); });
+    window.addEventListener('keydown', (ev) => { if    window.addEventListener('keydown', (ev) => { if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click(); });
   </script>
 </body>
