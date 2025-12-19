@@ -27,10 +27,11 @@
   <div id="msg" class="msg">Carregando modelo…</div>
   <div id="err" class="err"></div>
 
-  <!-- Bibliotecas via CDN (ordem correta) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min  <script src="https://cdn.jsdelivr.net/npm/three@0.150./controls/OrbitControls.js</script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaderss</script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150./loaders/DRACOLoader.js</script>
+  <!-- Bibliotecas via CDN (corrigidas) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/DRACOLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
 
   <script>
     const container = document.getElementById('app');
@@ -46,17 +47,26 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
-    if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace; else renderer.outputEncoding = THREE.sRGBEncoding;
+    if ('outputColorSpace' in renderer) {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    } else {
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    }
     container.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x303040, 0.9); scene.add(hemi);
-    const dir  = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(10,20,10); scene.add(dir);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x303040, 0.9);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    dir.position.set(10, 20, 10);
+    scene.add(dir);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
     const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
-    grid.material.opacity = 0.6; grid.material.transparent = true; scene.add(grid);
+    grid.material.opacity = 0.6;
+    grid.material.transparent = true;
+    scene.add(grid);
 
     // DRACO decoder do CDN oficial dos exemplos do Three.js
     const dracoLoader = new THREE.DRACOLoader();
@@ -70,7 +80,10 @@
 
     // Verificar existência antes de carregar (HEAD evita erro silencioso)
     fetch(MODEL_URL, { method: 'HEAD' })
-      .then(res => { if (!res.ok) throw new Error(`Status ${res.status} ao acessar ${MODEL_URL}`); carregar(); })
+      .then(res => {
+        if (!res.ok) throw new Error(`Status ${res.status} ao acessar ${MODEL_URL}`);
+        carregar();
+      })
       .catch(e => showError(`Não foi possível localizar "${MODEL_URL}". ${e.message} — Caminho/nome no repositório podem estar diferentes.`));
 
     function carregar() {
@@ -114,17 +127,43 @@
       controls.update();
     }
 
-    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-    function onResize() { const w = container.clientWidth, h = container.clientHeight; camera.aspect = w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
-    window.addEventListener('resize', onResize); onResize();
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function onResize() {
+      const w = container.clientWidth, h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    window.addEventListener('resize', onResize);
+    onResize();
 
     document.getElementById('btnFit').addEventListener('click', () => {
-      const group = new THREE.Group(); scene.traverse(o => { if (o.isMesh) group.add(o); }); fitCamera(group);
+      const group = new THREE.Group();
+      scene.traverse(o => { if (o.isMesh) group.add(o); });
+      fitCamera(group);
     });
-    document.getElementById('chkGrid').addEventListener('change', (e) => { grid.visible = e.target.checked; });
+
+    document.getElementById('chkGrid').addEventListener('change', (e) => {
+      grid.visible = e.target.checked;
+    });
+
     document.getElementById('btnFull').addEventListener('click', () => {
-      const elem = document.documentElement; if (!document.fullscreenElement) elem.requestFullscreen?.(); else document.exitFullscreen?.();
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) elem.requestFullscreen?.();
+      else document.exitFullscreen?.();
     });
-    window.addEventListener('keydown', (ev) => { if (ev.key.toLowerCase() === 'f') document.getElementById('btn    window.addEventListener('keydown', (ev) => { if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click(); });
+
+    // Atalho [F] para enquadrar
+    window.addEventListener('keydown', (ev) => {
+      if (ev.key.toLowerCase() === 'f') {
+        document.getElementById('btnFit').click();
+      }
+    });
   </script>
 </body>
+</
