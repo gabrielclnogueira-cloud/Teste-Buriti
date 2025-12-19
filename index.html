@@ -2,15 +2,81 @@
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
-<title>Teste JS</title>
+<title>Viewer 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+html, body { margin:0; height:100%; background:#111; overflow:hidden; }
+#app { width:100%; height:100%; }
+#msg {
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  color:#ddd;
+  background:rgba(0,0,0,.5);
+  padding:6px 8px;
+  border-radius:6px;
+  font-family:system-ui;
+  font-size:12px;
+}
+</style>
 </head>
-<body style="background:black;color:white;font-family:Arial">
 
-<h1>Teste JavaScript</h1>
+<body>
+<div id="app"></div>
+<div id="msg">Carregando modelo…</div>
 
-<script>
-alert('JS EXECUTADO COM SUCESSO');
-console.log('JS EXECUTADO');
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+
+const container = document.getElementById('app');
+const msg = document.getElementById('msg');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 10000);
+camera.position.set(5,5,5);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+container.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 1));
+const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+dir.position.set(10,10,10);
+scene.add(dir);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const loader = new GLTFLoader();
+loader.load(
+  './modelo.glb',
+  (gltf) => {
+    scene.add(gltf.scene);
+    msg.textContent = 'Modelo carregado';
+  },
+  undefined,
+  (err) => {
+    msg.textContent = 'Erro ao carregar GLB';
+    console.error(err);
+  }
+);
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 
 </body>
