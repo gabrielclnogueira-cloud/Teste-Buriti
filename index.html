@@ -8,17 +8,32 @@
   <style>
     html, body { height: 100%; margin: 0; }
     #app { position: fixed; inset: 0; background: #111; }
-    .ui { position: fixed; top: 10px; left: 10px; z-index: 10; display: flex; gap: 8px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    .btn { border: 1px solid #444; background: #1e1e1e; color: #ddd; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .ui {
+      position: fixed; top: 10px; left: 10px; z-index: 10;
+      display: flex; gap: 8px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .btn {
+      border: 1px solid #444; background: #1e1e1e; color: #ddd;
+      padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
     .btn:hover { background: #2a2a2a; }
-    .msg { position: fixed; bottom: 10px; left: 10px; z-index: 10; color: #ccc; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: rgba(0,0,0,.35); padding: 6px 8px; border-radius: 6px; max-width: 60ch; }
-    .err { position: fixed; bottom: 10px; right: 10px; z-index: 10; background: #2b1d1d; color: #ffb4b4; padding: 8px 10px; border-radius: 8px; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 60ch; border: 1px solid #6b3030; display:none; }
+    .msg {
+      position: fixed; bottom: 10px; left: 10px; z-index: 10; color: #ccc;
+      font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: rgba(0,0,0,.35); padding: 6px 8px; border-radius: 6px; max-width: 60ch;
+    }
+    .err {
+      position: fixed; bottom: 10px; right: 10px; z-index: 10;
+      background: #2b1d1d; color: #ffb4b4; padding: 8px 10px; border-radius: 8px;
+      font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 60ch;
+      border: 1px solid #6b3030; display:none;
+    }
   </style>
 </head>
 <body>
   <div id="app"></div>
   <div class="ui">
-    <button id="btnFit" class="btn" title="Enquadrar modelo (F)">Enquadrar</button>
+    <button id="btnFit"  class="btn" title="Enquadrar modelo (F)">Enquadrar</button>
     <button id="btnFull" class="btn" title="Tela cheia">Tela cheia</button>
     <label class="btn" style="display:flex;align-items:center;gap:6px;user-select:none;">
       <input id="chkGrid" type="checkbox" checked /> Grade
@@ -27,71 +42,75 @@
   <div id="msg" class="msg">Carregando modelo…</div>
   <div id="err" class="err"></div>
 
-  <!-- Bibliotecas via CDN (corrigidas) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/DRACOLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- Versão módulos (ESM) -->
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/DRACOLoader.js';
 
-  <script>
     const container = document.getElementById('app');
     const msg = document.getElementById('msg');
     const errBox = document.getElementById('err');
     const showError = (t) => { errBox.textContent = t; errBox.style.display = 'block'; console.error(t); };
 
-    // Cena, câmera e render
+    // Cena, câmera, render
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
+
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 50000);
     camera.position.set(5, 3, 8);
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
-    if ('outputColorSpace' in renderer) {
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-    } else {
-      renderer.outputEncoding = THREE.sRGBEncoding;
-    }
+    if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace; else renderer.outputEncoding = THREE.sRGBEncoding;
     container.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x303040, 0.9);
-    scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-    dir.position.set(10, 20, 10);
-    scene.add(dir);
+    // Luzes
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(10, 20, 10); scene.add(dir);
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    // Controles (AGORA com módulos: new OrbitControls(...) direto)
+    const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
+    // Grade
     const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
-    grid.material.opacity = 0.6;
-    grid.material.transparent = true;
-    scene.add(grid);
+    grid.material.opacity = 0.6; grid.material.transparent = true; scene.add(grid);
 
-    // DRACO decoder do CDN oficial dos exemplos do Three.js
-    const dracoLoader = new THREE.DRACOLoader();
-    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/libs/draco/');
+    // Draco
+    const dracoLoader = new DRACOLoader();
+    // Em jsm, o path correto é "examples/jsm/libs/draco/"
+    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/libs/draco/');
 
-    const gltfLoader = new THREE.GLTFLoader();
+    const gltfLoader = new GLTFLoader();
     gltfLoader.setDRACOLoader(dracoLoader);
 
-    // >>> Ajuste aqui o caminho do seu arquivo se estiver em subpasta:
+    // Ajuste aqui se seu GLB estiver em subpasta
     const MODEL_URL = 'modelo.glb'; // ex.: 'assets/modelo.glb'
 
-    // Verificar existência antes de carregar (HEAD evita erro silencioso)
+    // Checar existência antes de carregar (ajuda a revelar 404/nome divergente)
     fetch(MODEL_URL, { method: 'HEAD' })
-      .then(res => {
-        if (!res.ok) throw new Error(`Status ${res.status} ao acessar ${MODEL_URL}`);
-        carregar();
-      })
-      .catch(e => showError(`Não foi possível localizar "${MODEL_URL}". ${e.message} — Caminho/nome no repositório podem estar diferentes.`));
+      .then(res => { if (!res.ok) throw new Error(`Status ${res.status} em ${MODEL_URL}`); carregar(); })
+      .catch(e => showError(`Não foi possível localizar "${MODEL_URL}". ${e.message}. Verifique nome/caminho no repositório (case-sensitive).`));
 
     function carregar() {
       gltfLoader.load(
         MODEL_URL,
         (gltf) => {
-          const root = gltf.scene || gltf.scenes[0];
+          const root = gltf.scene || gltf.scenes?.[0];
+          if (!root) return showError('GLB carregado, mas cena vazia.');
           scene.add(root);
+
+          // Ajuste fino de materiais (opcional)
+          root.traverse((o) => {
+            if (o.isMesh && o.material) {
+              if (o.material.map) o.material.map.anisotropy = 8;
+              o.material.needsUpdate = true;
+            }
+          });
+
           fitCamera(root);
           msg.textContent = 'Modelo carregado. Use o mouse para orbitar/zoom. [F] Enquadrar.';
           animate();
@@ -101,7 +120,7 @@
           const pct = Math.min(100, Math.round((xhr.loaded / total) * 100));
           msg.textContent = `Carregando modelo… ${pct}%`;
         },
-        (error) => showError(`Falha ao carregar o GLB. Abra F12 → Console/Network. Detalhe: ${error?.message || error}`)
+        (error) => showError(`Falha ao carregar GLB. Detalhe: ${error?.message || error}`)
       );
     }
 
@@ -127,43 +146,17 @@
       controls.update();
     }
 
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-
-    function onResize() {
-      const w = container.clientWidth, h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h, false);
-    }
-    window.addEventListener('resize', onResize);
-    onResize();
+    function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+    function onResize(){ const w=container.clientWidth, h=container.clientHeight; camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
+    window.addEventListener('resize', onResize); onResize();
 
     document.getElementById('btnFit').addEventListener('click', () => {
-      const group = new THREE.Group();
-      scene.traverse(o => { if (o.isMesh) group.add(o); });
-      fitCamera(group);
+      const group = new THREE.Group(); scene.traverse(o => { if (o.isMesh) group.add(o); }); fitCamera(group);
     });
-
-    document.getElementById('chkGrid').addEventListener('change', (e) => {
-      grid.visible = e.target.checked;
-    });
-
+    document.getElementById('chkGrid').addEventListener('change', (e) => { grid.visible = e.target.checked; });
     document.getElementById('btnFull').addEventListener('click', () => {
-      const elem = document.documentElement;
-      if (!document.fullscreenElement) elem.requestFullscreen?.();
-      else document.exitFullscreen?.();
+      const      const elem = document.documentElement; if (!document.fullscreenElement) elem.requestFullscreen?.(); else document.exitFullscreen?.();
     });
-
-    // Atalho [F] para enquadrar
-    window.addEventListener('keydown', (ev) => {
-      if (ev.key.toLowerCase() === 'f') {
-        document.getElementById('btnFit').click();
-      }
-    });
+    window.addEventListener('keydown', (ev) => { if (ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click(); });
   </script>
 </body>
-</
