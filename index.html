@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
-  <title>Viewer 3D – Buriti (ESM + Draco)</title>
+  <title>Viewer 3D – Buriti</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     html, body { height: 100%; margin: 0; }
@@ -30,129 +29,6 @@
   <div id="msg" class="msg">Carregando modelo…</div>
   <div id="err" class="err"></div>
 
-  <!-- Apenas UM script, em modo módulo (ESM) -->
-  <script type="module">
-    import * as THREE        from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
-    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/controls/OrbitControls.js';
-    import { GLTFLoader }    from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/GLTFLoader.js';
-    import { DRACOLoader }   from 'https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/loaders/DRACOLoader.js';
-
-    const container = document.getElementById('app');
-    const msg       = document.getElementById('msg');
-    const errBox    = document.getElementById('err');
-    const showError = (t) => { errBox.textContent = t; errBox.style.display = 'block'; console.error(t); };
-
-    // Ajuste se estiver em subpasta (ex.: 'assets/modelo.glb')
-    const MODEL_URL = 'modelo.glb';
-
-    // Cena/Câmera/Render
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111111);
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 50000);
-    camera.position.set(5, 3, 8);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace; else renderer.outputEncoding = THREE.sRGBEncoding;
-    container.appendChild(renderer.domElement);
-
-    // Luzes
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(10, 20, 10); scene.add(dir);
-
-    // Controles
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
-    // Grade + eixos (ajuda na orientação)
-    const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
-    grid.material.opacity = 0.6; grid.material.transparent = true; scene.add(grid);
-    const axes = new THREE.AxesHelper(2); axes.visible = false; scene.add(axes);
-
-    // Draco (ESM usa jsM/libs/draco)
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/libs/draco/');
-
-    // Loader GLTF/GLB
-    const gltfLoader = new GLTFLoader();
-    gltfLoader.setDRACOLoader(dracoLoader);
-
-    // Checa existência do GLB (HEAD → mostra 404 cedo se nome/caminho errados)
-    fetch(MODEL_URL, { method: 'HEAD' })
-      .then(res => { if (!res.ok) throw new Error('Status ' + res.status + ' em ' + MODEL_URL); carregar(); })
-      .catch(e => showError('Não foi possível localizar "' + MODEL_URL + '". ' + e.message + '. Verifique nome/caminho no repositório (case-sensitive).'));
-
-    function carregar() {
-      gltfLoader.load(
-        MODEL_URL,
-        (gltf) => {
-          const root = gltf.scene || gltf.scenes?.[0];
-          if (!root) return showError('GLB carregado, mas cena vazia.');
-          scene.add(root);
-
-          // Ajuste fino
-          root.traverse((o) => {
-            if (o.isMesh && o.material) {
-              if (o.material.map) o.material.map.anisotropy = 8;
-              o.material.needsUpdate = true;
-            }
-          });
-
-          fitCamera(root);
-          msg.textContent = 'Modelo carregado. Use o mouse para orbitar/zoom. [F] Enquadrar.';
-          axes.visible = true;
-          animate();
-        },
-        (xhr) => {
-          const total = xhr.total || 1;
-          const pct   = Math.min(100, Math.round((xhr.loaded / total) * 100));
-          msg.textContent = 'Carregando modelo… ' + pct + '%';
-        },
-        (error) => showError('Falha ao carregar GLB. Detalhe: ' + (error?.message || error))
-      );
-    }
-
-    function fitCamera(object3D) {
-      const box    = new THREE.Box3().setFromObject(object3D);
-      const size   = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      const maxSz  = Math.max(size.x, size.y, size.z);
-
-      grid.scale.setScalar(Math.max(1, maxSz / 10));
-      grid.position.y = box.min.y;
-      axes.position.copy(center);
-
-      const halfFovY = (camera.fov * Math.PI) / 360;
-      const distance = (Math.max(size.x, size.y, size.z) * 1.25) / Math.tan(halfFovY);
-      const dirv     = new THREE.Vector3(1, 0.6, 1).normalize();
-
-      camera.position.copy(center.clone().addScaledVector(dirv, distance));
-      camera.near = Math.max(0.01, distance / 100);
-      camera.far  = distance * 100;
-      camera.updateProjectionMatrix();
-
-      controls.target.copy(center);
-      controls.update();
-    }
-
-    function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene    function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
-
-    function onResize(){ const w=container.clientWidth, h=container.clientHeight; camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
-    window.addEventListener('resize', onResize); onResize();
-
-    // UI
-    document.getElementById('btnFit').addEventListener('click', () => {
-      const group = new THREE.Group(); scene.traverse(o => { if (o.isMesh) group.add(o); }); fitCamera(group);
-    });
-    document.getElementById('chkGrid').addEventListener('change', (e) => { grid.visible = e.target.checked; axes.visible = e.target.checked; });
-    document.getElementById('btnFull').addEventListener('click', () => {
-      const elem = document.documentElement;
-      if (!document.fullscreenElement && elem.requestFullscreen) elem.requestFullscreen();
-      else if (document.exitFullscreen) document.exitFullscreen();
-    });
-    window.addEventListener('keydown', (ev) => {
-      if (ev.key && ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
-    });
-  </script>
-</body>
+  <!-- Carrega o app como MÓDULO (ESM). O ?v= quebra cache do Pages/navegador -->
+  ./app.js?v=4</script>
+</</body>
