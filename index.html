@@ -1,34 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8" />
-  <title>Viewer 3D – Buriti</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    html, body { height: 100%; margin: 0; }
-    #app { position: fixed; inset: 0; background: #111; }
-    .ui {
-      position: fixed; top: 10px; left: 10px; z-index: 10;
-      display: flex; gap: 8px; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
-    .btn { border: 1px solid #444; background: #1e1e1e; color: #ddd; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-    .btn:hover { background: #2a2a2a; }
-    .msg { position: fixed; bottom: 10px; left: 10px; z-index: 10; color: #ccc; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: rgba(0,0,0,.35); padding: 6px 8px; border-radius: 6px; max-width: 60ch; }
-    .err { position: fixed; bottom: 10px; right: 10px; z-index: 10; background: #2b1d1d; color: #ffb4b4; padding: 8px 10px; border-radius: 8px; font: 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 60ch; border: 1px solid #6b3030; display:none; }
-  </style>
+  <meta charset="utf-8">
+  <title>Buriti – model-viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js</script>
+  <style>html,body{height:100%;margin:0}</style>
 </head>
 <body>
-  <div id="app"></div>
-  <div class="ui">
-    <button id="btnFit"  class="btn" title="Enquadrar modelo (F)">Enquadrar</button>
-    <button id="btnFull" class="btn" title="Tela cheia">Tela cheia</button>
-    <label class="btn" style="display:flex;align-items:center;gap:6px;user-select:none;">
-      <input id="chkGrid" type="checkbox" checked /> Grade
-    </label>
-  </div>
-  <div id="msg" class="msg">Carregando modelo…</div>
-  <div id="err" class="err"></div>
-
-  <!-- Carrega o app como MÓDULO (ESM). O ?v= quebra cache do Pages/navegador -->
-  ./app.js?v=4</script>
-</</body>
+  <model-viewer src="modelo.glb" ar camera-controls auto-  <model-viewer src="modelo.glb" ar camera-controls auto-ody>
