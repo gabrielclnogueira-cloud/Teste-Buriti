@@ -43,65 +43,73 @@
     const container = document.getElementById('app');
     const msg       = document.getElementById('msg');
     const errBox    = document.getElementById('err');
-    function showError(text) { errBox.textContent = text; errBox.style.display = 'block'; console.error(text); }
-
-    // ===== Cena/Câmera/Render =====
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111111);
-
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 50000);
-    camera.position.set(5, 3, 8);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace; else renderer.outputEncoding = THREE.sRGBEncoding;
-    container.appendChild(renderer.domElement);
-
-    // ===== Luzes =====
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-    dir.position.set(10, 20, 10);
-    scene.add(dir);
-
-    // ===== Controles =====
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
-    // ===== Grade =====
-    const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
-    grid.material.opacity = 0.6;
-    grid.material.transparent = true;
-    scene.add(grid);
-
-    // ===== Draco Loader (ESM usa jsM/libs/draco) =====
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/libs/draco/');
-
-    // ===== GLTF Loader =====
-    const gltfLoader = new GLTFLoader();
-    gltfLoader.setDRACOLoader(dracoLoader);
-
-    // ===== Caminho do modelo (ajuste se estiver em subpasta) =====
-    const MODEL_URL = 'modelo.glb'; // ex.: 'assets/modelo.glb'
-
-    // ===== Verificar existência antes de carregar (HEAD revela 404) =====
-    try {
-      const head = await fetch(MODEL_URL, { method: 'HEAD' });
-      if (!head.ok) throw new Error(`Status ${head.status} ao acessar ${MODEL_URL}`);
-      // Prosseguir carregamento
-      carregarModelo();
-    } catch (e) {
-      showError(`Não foi possível localizar "${MODEL_URL}". ${e.message}. Verifique nome/caminho no repositório (case-sensitive).`);
+    function showError(text) {
+      errBox.textContent = text;
+      errBox.style.display = 'block';
+      console.error(text);
     }
 
-    // ===== Carregar GLB =====
-    function carregarModelo() {
+    // ===== Boot principal (sem top-level await) =====
+    async function boot() {
+      // Verificar se o modelo existe (HEAD ajuda a denunciar 404/caminho errado)
+      try {
+        const head = await fetch(MODEL_URL, { method: 'HEAD' });
+        if (!head.ok) throw new Error('Status ' + head.status + ' ao acessar ' + MODEL_URL);
+      } catch (e) {
+        showError('Não foi possível localizar "' + MODEL_URL + '". ' + e.message + '. Verifique nome/caminho no repositório (case‑sensitive).');
+        return;
+      }
+
+      // Cena/câmera/render
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x111111);
+
+      const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 50000);
+      camera.position.set(5, 3, 8);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      if ('outputColorSpace' in renderer) {
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      } else {
+        renderer.outputEncoding = THREE.sRGBEncoding; // fallback
+      }
+      container.appendChild(renderer.domElement);
+
+      // Luzes
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x303040, 0.9));
+      const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+      dir.position.set(10, 20, 10);
+      scene.add(dir);
+
+      // Controles
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+
+      // Grade
+      const grid = new THREE.GridHelper(10, 10, 0x333333, 0x222222);
+      grid.material.opacity = 0.6;
+      grid.material.transparent = true;
+      scene.add(grid);
+
+      // Draco (ESM usa jsm/libs/draco)
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/libs/draco/');
+
+      // GLTF
+      const gltfLoader = new GLTFLoader();
+      gltfLoader.setDRACOLoader(dracoLoader);
+
+      // Carregar modelo
       gltfLoader.load(
         MODEL_URL,
         function (gltf) {
           const root = gltf.scene || (gltf.scenes && gltf.scenes[0]);
-          if (!root) return showError('GLB carregado, mas cena vazia.');
+          if (!root) {
+            showError('GLB carregado, mas cena vazia.');
+            return;
+          }
           scene.add(root);
 
           // Ajuste fino (opcional)
@@ -112,7 +120,7 @@
             }
           });
 
-          enquadrar(root);
+          fitCameraToObject(camera, controls, grid, root);
           msg.textContent = 'Modelo carregado. Use o mouse para orbitar/zoom. [F] Enquadrar.';
           animate();
         },
@@ -125,10 +133,46 @@
           showError('Falha ao carregar GLB. Detalhe: ' + (error && error.message ? error.message : error));
         }
       );
+
+      // Loop
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      // Responsivo
+      function onResize() {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+      }
+      window.addEventListener('resize', onResize);
+      onResize();
+
+      // UI
+      document.getElementById('btnFit').addEventListener('click', function () {
+        const group = new THREE.Group();
+        scene.traverse(function (o) { if (o.isMesh) group.add(o); });
+        fitCameraToObject(camera, controls, grid, group);
+      });
+      document.getElementById('chkGrid').addEventListener('change', function (e) {
+        grid.visible = e.target.checked;
+      });
+      document.getElementById('btnFull').addEventListener('click', function () {
+        const elem = document.documentElement;
+        if (!document.fullscreenElement && elem.requestFullscreen) elem.requestFullscreen();
+        else if (document.exitFullscreen) document.exitFullscreen();
+      });
+      window.addEventListener('keydown', function (ev) {
+        if (ev.key && ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
+      });
     }
 
-    // ===== Enquadrar câmera =====
-    function enquadrar(object3D) {
+    // ===== Util: ajustar câmera ao objeto =====
+    function fitCameraToObject(camera, controls, grid, object3D) {
       const box    = new THREE.Box3().setFromObject(object3D);
       const size   = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
@@ -146,45 +190,14 @@
       camera.far  = distance * 100;
       camera.updateProjectionMatrix();
 
-      controls.target.copy(center);
+           controls.target.copy(center);
       controls.update();
     }
 
-    // ===== Loop =====
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
+    // ===== Caminho do modelo (ajuste se estiver em subpasta) =====
+    const MODEL_URL = 'modelo.glb'; // ex.: 'assets/modelo.glb'
 
-    // ===== Responsivo =====
-    function onResize() {
-      const w = container.clientWidth, h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h, false);
-    }
-    window.addEventListener('resize', onResize);
-    onResize();
-
-    // ===== UI =====
-    document.getElementById('btnFit').addEventListener('click', function () {
-      const group = new THREE.Group();
-      scene.traverse(function (o) { if (o.isMesh) group.add(o); });
-      enquadrar(group);
-    });
-    document.getElementById('chkGrid').addEventListener('change', function (e) {
-      grid.visible = e.target.checked;
-    });
-    document.getElementById('btnFull').addEventListener('click', function () {
-      const elem = document.documentElement;
-      if (!document.fullscreenElement && elem.requestFullscreen) elem.requestFullscreen();
-      else if (document.exitFullscreen) document.exitFullscreen();
-    });
-
-    // Atalho (F = fit)
-    window.addEventListener('keydown', function (ev) {
-      if (ev.key && ev.key.toLowerCase() === 'f') document.getElement      if (ev.key && ev.key.toLowerCase() === 'f') document.getElementById('btnFit').click();
-    });
+    // ===== Iniciar =====
+    boot();
   </script>
 </body>
